@@ -14,7 +14,7 @@ pub const Process = struct {
 
     const Self = @This();
 
-    const ProcessError = error{MalformedOomScore, MalformedOomScoreAdj};
+    const ProcessError = error{MalformedOomScore, MalformedOomScoreAdj, MalformedVmRss };
 
     fn fromPid(pid: u32) !Self {
         const oom_score = try oomScoreFromPid(pid);
@@ -49,6 +49,21 @@ pub const Process = struct {
 
         return oom_score_adj;
     }
+
+    pub fn vmRss(self: * const Self) !usize {
+        var filename = try fmt.bufPrint(&buffer, "/proc/{}/statm", .{ self.pid });
+
+        var statm_file = try fs.cwd().openFile(filename, .{});
+        defer statm_file.close();
+        var statm_reader = statm_file.reader();
+
+        // Skip first field (total program size)
+        try statm_reader.skipUntilDelimiterOrEof(' ');
+        var rss_str = try statm_reader.readUntilDelimiter(&buffer, ' ');
+
+        var ret = parse(usize, rss_str) orelse return error.MalformedVmRss;
+        return (ret * std.mem.page_size) / 1024;
+    }
 };
 
 /// Wrapper over fmt.parseInt which returns null
@@ -66,9 +81,10 @@ fn coldNoOp() void {
 
 /// Searches for a process to kill in order to
 /// free up memory
-pub fn findVictimProcess() !?Process {
-    var victim: ?Process = null;
-    var victim_vm_rss: ?i16 = null;
+pub fn findVictimProcess() !Process {
+    var victim: Process = undefined;
+    var victim_vm_rss: usize = undefined;
+    var victim_is_undefined = true;
     var proc_dir = try fs.cwd().openDir("/proc", .{ .access_sub_paths = false, .iterate = true });
     var proc_it = proc_dir.iterate();
 
@@ -92,16 +108,43 @@ pub fn findVictimProcess() !?Process {
 
         const process = try Process.fromPid(pid);
 
-        if (victim == null) {
-            // We're still reading the first process
+        if (victim_is_undefined) {
+            // We're still reading the first process so a victim hasn't been chosen
             coldNoOp();
             victim = process;
-            std.log.info("First victim set");
+            victim_vm_rss = try victim.vmRss();
+            victim_is_undefined = false;
+            std.log.info("First victim set", .{});
         }
 
+        if (victim.oom_score > process.oom_score) {
+            // Our current victim is less innocent than the process being analysed
+            continue;
+        }
 
+        const current_vm_rss = try process.vmRss();
+        if (current_vm_rss == 0) {
+            // Current process is a kernel thread
+            continue;
+        }
+    
+        // TODO: recheck this
+        if (process.oom_score == victim.oom_score and current_vm_rss <= victim_vm_rss) {
+            continue;
+        }
 
-        // std.log.info("Found PID: {} with OOM score {}, OOM score adj. {}", .{ pid, oom_score, oom_score_adj });
+        const current_oom_score_adj = process.oomScoreAdj() catch {
+            std.log.warn("Failed to read adj. OOM score for PID {}. Continuing.", .{process.pid});
+            continue;
+        };
+
+        if (current_oom_score_adj == -1000) {
+            // Follow the behaviour of the standard OOM killer: don't kill processes with oom_score_adj equals to -1000
+            continue;
+        }
+
+        victim = process;
+        victim_vm_rss = current_vm_rss;
     }
 
     return victim;
