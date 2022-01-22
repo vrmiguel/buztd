@@ -10,16 +10,25 @@ test "process.zig" {
     _ = @import("process.zig");
 }
 
+test "monitor.zig" {
+    _ = @import("monitor.zig");
+}
+
+const pressure = @import("pressure.zig");
 const daemon = @import("daemonize.zig");
 const process = @import("process.zig");
 
 pub fn main() anyerror!void {
     // TODO: argparse
-    // const should_daemonize = true;
+    const should_daemonize = false;
 
-    // if (should_daemonize) {
-    //     try daemon.daemonize();
-    // }
+    if (should_daemonize) {
+        try daemon.daemonize();
+    }
+
+    var buffer: [128]u8 = undefined;
+
+    _ = try pressure.pressureSomeAvg10(&buffer);
 
     _ = try process.findVictimProcess();
 }

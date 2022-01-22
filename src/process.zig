@@ -15,7 +15,7 @@ pub const Process = struct {
 
     const Self = @This();
 
-    const ProcessError = error{MalformedOomScore, MalformedOomScoreAdj, MalformedVmRss };
+    const ProcessError = error{ MalformedOomScore, MalformedOomScoreAdj, MalformedVmRss };
 
     fn fromPid(pid: u32) !Self {
         const oom_score = try oomScoreFromPid(pid);
@@ -63,8 +63,8 @@ pub const Process = struct {
         return buffer[0 .. bytes_read - 1];
     }
 
-    pub fn vmRss(self: * const Self) !usize {
-        var filename = try fmt.bufPrint(&buffer, "/proc/{}/statm", .{ self.pid });
+    pub fn vmRss(self: *const Self) !usize {
+        var filename = try fmt.bufPrint(&buffer, "/proc/{}/statm", .{self.pid});
 
         var statm_file = try fs.cwd().openFile(filename, .{});
         defer statm_file.close();
@@ -143,7 +143,7 @@ pub fn findVictimProcess() !Process {
             // Current process is a kernel thread
             continue;
         }
-    
+
         // TODO: recheck this
         if (process.oom_score == victim.oom_score and current_vm_rss <= victim_vm_rss) {
             continue;
@@ -166,7 +166,7 @@ pub fn findVictimProcess() !Process {
     }
 
     const ns_elapsed = timer.read();
-    std.log.warn("Victim found in {} ns.: {s} with PID {} and OOM score {}", .{ns_elapsed, try victim.comm(), victim.pid, victim.oom_score});
+    std.debug.print("Victim found in {} ns.: {s} with PID {} and OOM score {}\n", .{ ns_elapsed, try victim.comm(), victim.pid, victim.oom_score });
 
     return victim;
 }
