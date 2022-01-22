@@ -14,9 +14,7 @@ const stat = @cImport({
 });
 
 /// Any error that might come up during process daemonization
-const DaemonizeError = error {
-    FailedToSetSessionId
-} || os.ForkError;
+const DaemonizeError = error{FailedToSetSessionId} || os.ForkError;
 
 const SignalHandler = struct {
     fn ignore(sig: i32, info: *const os.siginfo_t, ctx_ptr: ?*const anyopaque) callconv(.C) void {
@@ -92,9 +90,7 @@ test "fork_and_keep_child works" {
     // Current process is alive (obviously)
     _ = try fmt.bufPrint(&buf, "/proc/{}/stat", .{new_pid});
 
-    try expect(
-        linux.stat(&buf, &stat_buf) == 0
-    );
+    try expect(linux.stat(&buf, &stat_buf) == 0);
 
     // Old process should now be dead
     _ = try fmt.bufPrint(&buf, "/proc/{}/stat", .{first_pid});
@@ -103,7 +99,6 @@ test "fork_and_keep_child works" {
     std.time.sleep(250_000);
 
     try expect(
-        // Stat should now fail
-        linux.stat(&buf, &stat_buf) != 0
-    );
+    // Stat should now fail
+    linux.stat(&buf, &stat_buf) != 0);
 }

@@ -10,9 +10,9 @@ pub const MCL = struct {
     pub const FUTURE = 2;
     pub const ONFAULT = 4;
 };
-// Sysinfo struct
+
 // TODO: test if this works outside of x86_64
-// ESTOU FICANDO LOUCO!
+/// Contains certain statistics on memory and swap usage, as well as the load average
 pub const SysInfo = extern struct {
     uptime: c_long,
     loads: [3]c_ulong,
