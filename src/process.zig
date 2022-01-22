@@ -3,6 +3,7 @@ const fs = std.fs;
 const fmt = std.fmt;
 const mem = std.mem;
 const os = std.os;
+const time = std.time;
 
 /// Global buffer used whenever we need a buffer.
 /// bustd is single-threaded so this should be fine.
@@ -50,6 +51,18 @@ pub const Process = struct {
         return oom_score_adj;
     }
 
+    pub fn comm(self: *const Self) ![]u8 {
+        const path = try fmt.bufPrint(&buffer, "/proc/{}/comm", .{self.pid});
+
+        // The file descriptor for the oom_score file of this process
+        const comm_fd = try os.open(path, os.O.RDONLY, 0);
+        defer os.close(comm_fd);
+
+        const bytes_read = try os.read(comm_fd, &buffer);
+
+        return buffer[0 .. bytes_read - 1];
+    }
+
     pub fn vmRss(self: * const Self) !usize {
         var filename = try fmt.bufPrint(&buffer, "/proc/{}/statm", .{ self.pid });
 
@@ -85,6 +98,9 @@ pub fn findVictimProcess() !Process {
     var victim: Process = undefined;
     var victim_vm_rss: usize = undefined;
     var victim_is_undefined = true;
+
+    const timer = try time.Timer.start();
+
     var proc_dir = try fs.cwd().openDir("/proc", .{ .access_sub_paths = false, .iterate = true });
     var proc_it = proc_dir.iterate();
 
@@ -145,7 +161,12 @@ pub fn findVictimProcess() !Process {
 
         victim = process;
         victim_vm_rss = current_vm_rss;
+
+        // std.log.warn("New victim found: );
     }
+
+    const ns_elapsed = timer.read();
+    std.log.warn("Victim found in {} ns.: {s} with PID {} and OOM score {}", .{ns_elapsed, try victim.comm(), victim.pid, victim.oom_score});
 
     return victim;
 }
