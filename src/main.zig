@@ -17,6 +17,7 @@ test "monitor.zig" {
 const pressure = @import("pressure.zig");
 const daemon = @import("daemonize.zig");
 const process = @import("process.zig");
+const memory = @import("memory.zig");
 
 pub fn main() anyerror!void {
     // TODO: argparse
@@ -31,4 +32,6 @@ pub fn main() anyerror!void {
     _ = try pressure.pressureSomeAvg10(&buffer);
 
     _ = try process.findVictimProcess();
+
+    _ = try memory.MemoryInfo.new();
 }

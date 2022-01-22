@@ -85,7 +85,7 @@ fn parse(comptime T: type, buf: []const u8) ?T {
     return fmt.parseInt(T, buf, 10) catch null;
 }
 
-/// Used to try to tell LLVM to predict the other branch.
+/// Used to try to give LLVM hints on branch prediction.
 ///
 /// I have no idea how effective this is in practice.
 fn coldNoOp() void {

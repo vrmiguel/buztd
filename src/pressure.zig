@@ -5,8 +5,6 @@ const fs = std.fs;
 const mem = std.mem;
 const assert = std.debug.assert;
 
-
-
 pub fn pressureSomeAvg10(buffer: []u8) !f32 {
     assert(buffer.len >= 128);
 
@@ -19,14 +17,9 @@ pub fn pressureSomeAvg10(buffer: []u8) !f32 {
     const some = try memory_pressure_reader.readUntilDelimiter(buffer, ' ');
     assert(mem.eql(u8, some, "some"));
 
-    // Read "avg10"
+    // Read "avg10=" (`readUntilDelimiter` will eat the '=')
     const avg10 = try memory_pressure_reader.readUntilDelimiter(buffer, '=');
     assert(mem.eql(u8, avg10, "avg10"));
-
-    // Read '='
-    const equals = try memory_pressure_reader.readByte();
-    // TODO: why tf does this return 48 ?
-    assert(equals == 48);
 
     // Next up is the value we want
     const avg10_value = try memory_pressure_reader.readUntilDelimiter(buffer, ' ');
