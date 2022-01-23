@@ -9,12 +9,11 @@ const MemoryStatusTag = enum {
     near_terminal,
 };
 
-const MemoryStatus = union(MemoryStatusTag) {
+const MemoryStatus = union(MemoryStatusTag) { 
     /// Memory is "okay": basically no risk of memory thrashing 
-    ok: void,
-    /// Nearing the terminal PSI cutoff: memory thrashing is occurring or close to it.
-    /// Holds the current PSI value.
-    near_terminal: f32
+    ok: void, 
+    /// Nearing the terminal PSI cutoff: memory thrashing is occurring or close to it. Holds the current PSI value.
+    near_terminal: f32 
 };
 
 pub const Monitor = struct {
@@ -28,17 +27,7 @@ pub const Monitor = struct {
     const Self = @This();
 
     pub fn new(cutoff_psi: f32, buffer: []u8) !Self {
-        // const mem_info = try memory.MemoryInfo.new();
-        // const status: MemoryStatus = blk: {
-        //     if (mem_info.available_ram_percent <= 15) {
-        //         const psi = try pressure.pressureSomeAvg10(buffer);
-        //         break :blk MemoryStatus { .near_terminal = psi };
-        //     } else {
-        //         break :blk MemoryStatus.ok;
-        //     }
-        // };
-
-        var self = Self {
+        var self = Self{
             .mem_info = undefined,
             .cutoff_psi = cutoff_psi,
             .status = undefined,
@@ -50,13 +39,13 @@ pub const Monitor = struct {
         return self;
     }
 
-    pub fn updateMemoryStats(self: * Self) !void {
+    pub fn updateMemoryStats(self: *Self) !void {
         self.mem_info = try memory.MemoryInfo.new();
         self.status = blk: {
             if (self.mem_info.available_ram_percent <= 15) {
                 const psi = try pressure.pressureSomeAvg10(self.buffer);
                 std.log.warn("read avg10: {}", .{psi});
-                break :blk MemoryStatus { .near_terminal = psi };
+                break :blk MemoryStatus{ .near_terminal = psi };
             } else {
                 break :blk MemoryStatus.ok;
             }
@@ -69,8 +58,7 @@ pub const Monitor = struct {
             try self.updateMemoryStats();
             std.log.warn("isMemoryLow = {}", .{self.isMemoryLow()});
             time.sleep(200_000);
-        }        
-
+        }
     }
 
     fn isMemoryLow(self: *const Self) bool {

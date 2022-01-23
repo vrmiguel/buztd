@@ -18,8 +18,8 @@ pub const MemoryInfo = struct {
     fn ratio(x: u64, y: u64) u8 {
         const xf = @intToFloat(f32, x);
         const yf = @intToFloat(f32, y);
-        
-        const _ratio = (xf/yf) * 100.0;
+
+        const _ratio = (xf / yf) * 100.0;
 
         return @floatToInt(u8, _ratio);
     }
@@ -28,7 +28,7 @@ pub const MemoryInfo = struct {
         var si: syscalls.SysInfo = undefined;
         try syscalls.sysinfo(&si);
 
-        const mem_unit = @intCast(u64, si.mem_unit); 
+        const mem_unit = @intCast(u64, si.mem_unit);
 
         const available_ram_mb = bytes_to_megabytes(si.freeram, mem_unit);
         const total_ram_mb = bytes_to_megabytes(si.totalram, mem_unit);
@@ -43,7 +43,7 @@ pub const MemoryInfo = struct {
             }
         };
 
-        return Self {
+        return Self{
             .available_ram_mb = available_ram_mb,
             .total_ram_mb = total_ram_mb,
             .total_swap_mb = total_swap_mb,
