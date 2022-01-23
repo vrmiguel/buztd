@@ -79,7 +79,7 @@ pub const Monitor = struct {
         }
     }
 
-    /// Determines for how long bustd should sleep
+    /// Determines for how long buztd should sleep
     /// This function is essentially a copy of how earlyoom calculates its sleep time
     ///
     /// Credits: https://github.com/rfjakob/earlyoom/blob/dea92ae67997fcb1a0664489c13d49d09d472d40/main.c#L365

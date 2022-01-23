@@ -1,14 +1,14 @@
-//! The configuration file for bustd
+//! The configuration file for buztd
 const std = @import("std");
 
 
-/// Set whether or not bustd should daemonize
-/// itself. Don't use this if running bustd as a systed
-/// daemon or something of the sort.
+/// Sets whether or not buztd should daemonize
+/// itself. Don't use this if running buztd as a systemd
+/// service or something of the sort.
 pub const should_daemonize: bool = false;
 
 /// Free RAM percentage figures below this threshold are considered to be near terminal, meaning 
-/// that bustd will start to check for Pressure Stall Information whenever the
+/// that buztd will start to check for Pressure Stall Information whenever the
 /// free RAM figures go below this.
 /// However, this free RAM amount is what the sysinfo syscall gives us, which does not take in consideration
 /// reclaimable or cached pages. The true free RAM amount available to the OS is bigger than what it indicates.
@@ -29,7 +29,7 @@ pub const free_ram_threshold: u8 = 15;
 /// Try messing around with `tools/mem-eater.c` to guesstimate a value that works well for you.
 pub const cutoff_psi: f32 = 0.05;
 
-/// Sets processes that bustd must never kill.
+/// Sets processes that buztd must never kill.
 /// The values expected here are the `comm` values of the process you don't want to have terminated.
 /// A comm-value is the filename of the executable truncated to 16 characters..
 ///
@@ -41,7 +41,7 @@ pub const cutoff_psi: f32 = 0.05;
 /// });
 pub const unkillables = std.ComptimeStringMap(void, .{
         // Ideally, don't kill the oomkiller
-        .{ "bustd", void },
+        .{ "buztd", void },
 });
 
 

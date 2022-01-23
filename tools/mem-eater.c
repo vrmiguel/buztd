@@ -1,4 +1,4 @@
-// `bustd`'s memory eater
+// `buztd`'s memory eater
 
 #include <stdio.h>
 #include <time.h>

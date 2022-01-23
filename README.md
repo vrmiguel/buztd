@@ -1,6 +1,6 @@
-# `bustd`: Available memory or bust!
+# `buztd`: Available memory or bust!
 
-`bustd` is a lightweight process killer daemon for out-of-memory scenarios for Linux!
+`buztd` is a lightweight process killer daemon for out-of-memory scenarios for Linux!
 
 This particular project is a Zig version of the [original `bustd` project](https://github.com/vrmiguel/bustd).
 
@@ -12,21 +12,21 @@ The Zig version of `bustd` makes no heap allocations and relies solely on a sing
 
 ### Small CPU usage
 
-Much like `earlyoom` and `nohang`, `bustd` uses adaptive sleep times during its memory polling. 
+Much like `earlyoom` and `nohang`, `buztd` uses adaptive sleep times during its memory polling. 
 
-Unlike these two, however, `bustd` does not read from `/proc/meminfo`, instead opting for the `sysinfo` syscall.
+Unlike these two, however, `buztd` does not read from `/proc/meminfo`, instead opting for the `sysinfo` syscall.
 
 This approach has its up- and downsides. The amount of free RAM that `sysinfo` reads does not account for cached memory, while `MemAvailable` in `/proc/meminfo` does.
 
 However, the `sysinfo` syscall is one order of magnitude faster than parsing `/proc/meminfo`, at least according to [this kernel patch](https://sourceware.org/legacy-ml/libc-alpha/2015-08/msg00512.html) (granted, from 2015).
 
-As `bustd` can't solely rely on the free RAM readings of `sysinfo`, we check for memory stress through [Pressure Stall Information](https://www.kernel.org/doc/html/v5.8/accounting/psi.html).
+As `buztd` can't solely rely on the free RAM readings of `sysinfo`, we check for memory stress through [Pressure Stall Information](https://www.kernel.org/doc/html/v5.8/accounting/psi.html).
 
 More on that below.
 
-### `bustd` will try to lock all pages mapped into its address space
+### `buztd` will try to lock all pages mapped into its address space
 
-Much like `earlyoom`, `bustd` uses [`mlockall`](https://www.ibm.com/docs/en/aix/7.2?topic=m-mlockall-munlockall-subroutine) to avoid being sent to swap, which allows the daemon to remain responsive even when the system memory is under heavy load and susceptible to [thrashing](https://en.wikipedia.org/wiki/Thrashing_(computer_science)).
+Much like `earlyoom`, `buztd` uses [`mlockall`](https://www.ibm.com/docs/en/aix/7.2?topic=m-mlockall-munlockall-subroutine) to avoid being sent to swap, which allows the daemon to remain responsive even when the system memory is under heavy load and susceptible to [thrashing](https://en.wikipedia.org/wiki/Thrashing_(computer_science)).
 
 ### Checks for Pressure Stall Information
 
@@ -39,7 +39,7 @@ shortages, enabling you to take more proactive, granular, and nuanced steps
 when resources start becoming scarce.
 ```
 
-More specifically, `bustd` checks for how long, in microseconds, processes have stalled in the last 10 seconds. By default, `bustd` will kill a process when processes have stalled for 25 microseconds in the last ten seconds.
+More specifically, `buztd` checks for how long, in microseconds, processes have stalled in the last 10 seconds. By default, `buztd` will kill a process when processes have stalled for 25 microseconds in the last ten seconds.
 
 Example:
 ```
@@ -51,7 +51,7 @@ These ratios are percentages of recent trends over ten, sixty, and  three hundre
 
 The `some` row indicates the percentage of time n that given time frame in which _any_ process has stalled due to memory thrashing.
 
-`bustd` allows you to configure the value of `some avg10` in which, if surpassed, some process will be killed.
+`buztd` allows you to configure the value of `some avg10` in which, if surpassed, some process will be killed.
 
 The ideal value for this cutoff varies a lot between systems.
 
@@ -64,8 +64,8 @@ Requirements:
 * Linux 4.20+ built with `CONFIG_PSI=y`
 
 ```shell
-git clone https://github.com/vrmiguel/bustd-zig
-cd bustd-zig
+git clone https://github.com/vrmiguel/buztd
+cd buztd
 
 # Choose which compilation mode you'd like:
 zig build -Drelease-fast # Turns on optimization and disables safety checks
@@ -75,17 +75,17 @@ zig build -Drelease-small # Turns on size optimizations and disables safety chec
 
 ## Configuration
 
-As of the time of writing, this version of `bustd` offers no command-line argument parsing, but allows easy configuration through the `src/config.zig` file.
+As of the time of writing, this version of `buztd` offers no command-line argument parsing, but allows easy configuration through the `src/config.zig` file.
 
 
 ```zig
-/// Set whether or not bustd should daemonize
-/// itself. Don't use this if running bustd as a systed
+/// Set whether or not buztd should daemonize
+/// itself. Don't use this if running buztd as a systed
 /// daemon or something of the sort.
 pub const should_daemonize: bool = false;
 
 /// Free RAM percentage figures below this threshold are considered to be near terminal, meaning 
-/// that bustd will start to check for Pressure Stall Information whenever the
+/// that buztd will start to check for Pressure Stall Information whenever the
 /// free RAM figures go below this.
 /// However, this free RAM amount is what the sysinfo syscall gives us, which does not take in consideration
 /// reclaimable or cached pages. The true free RAM amount available to the OS is bigger than what it indicates.
