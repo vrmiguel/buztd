@@ -32,7 +32,7 @@ pub fn main() anyerror!void {
 
     _ = try pressure.pressureSomeAvg10(&buffer);
 
-    _ = try process.findVictimProcess();
+    _ = try process.findVictimProcess(&buffer);
 
     _ = try memory.MemoryInfo.new();
 

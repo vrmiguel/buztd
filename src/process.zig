@@ -11,32 +11,29 @@ const mem = std.mem;
 const os = std.os;
 const time = std.time;
 
-/// Global buffer used whenever we need a buffer.
-/// bustd is single-threaded so this should be fine.
-pub var buffer: [128]u8 = undefined;
-
 pub const Process = struct {
     pid: u32,
     oom_score: i16,
+    buffer: []u8,
 
     const Self = @This();
 
     const ProcessError = error{ MalformedOomScore, MalformedOomScoreAdj, MalformedVmRss };
 
-    fn fromPid(pid: u32) !Self {
-        const oom_score = try oomScoreFromPid(pid);
+    fn fromPid(pid: u32, buffer: []u8) !Self {
+        const oom_score = try oomScoreFromPid(pid, buffer);
 
-        return Self{ .pid = pid, .oom_score = oom_score };
+        return Self{ .pid = pid, .oom_score = oom_score, .buffer = buffer };
     }
 
-    fn oomScoreFromPid(pid: u32) !i16 {
-        const path = try fmt.bufPrint(&buffer, "/proc/{}/oom_score", .{pid});
+    fn oomScoreFromPid(pid: u32, buffer: []u8) !i16 {
+        const path = try fmt.bufPrint(buffer, "/proc/{}/oom_score", .{pid});
 
         // The file descriptor for the oom_score file of this process
         const oom_score_fd = try os.open(path, os.O.RDONLY, 0);
         defer os.close(oom_score_fd);
 
-        const bytes_read = try os.read(oom_score_fd, &buffer);
+        const bytes_read = try os.read(oom_score_fd, buffer);
 
         const oom_score = parse(i16, buffer[0 .. bytes_read - 1]) orelse return error.MalformedOomScore;
 
@@ -44,29 +41,29 @@ pub const Process = struct {
     }
 
     pub fn oomScoreAdj(self: *const Self) !i16 {
-        const path = try fmt.bufPrint(&buffer, "/proc/{}/oom_score_adj", .{self.pid});
+        const path = try fmt.bufPrint(self.buffer, "/proc/{}/oom_score_adj", .{self.pid});
 
         // The file descriptor for the oom_score file of this process
         const oom_score_adj_fd = try os.open(path, os.O.RDONLY, 0);
         defer os.close(oom_score_adj_fd);
 
-        const bytes_read = try os.read(oom_score_adj_fd, &buffer);
+        const bytes_read = try os.read(oom_score_adj_fd, self.buffer);
 
-        const oom_score_adj = parse(i16, buffer[0 .. bytes_read - 1]) orelse return error.MalformedOomScoreAdj;
+        const oom_score_adj = parse(i16, self.buffer[0 .. bytes_read - 1]) orelse return error.MalformedOomScoreAdj;
 
         return oom_score_adj;
     }
 
     pub fn comm(self: *const Self) ![]u8 {
-        const path = try fmt.bufPrint(&buffer, "/proc/{}/comm", .{self.pid});
+        const path = try fmt.bufPrint(self.buffer, "/proc/{}/comm", .{self.pid});
 
         // The file descriptor for the oom_score file of this process
         const comm_fd = try os.open(path, os.O.RDONLY, 0);
         defer os.close(comm_fd);
 
-        const bytes_read = try os.read(comm_fd, &buffer);
+        const bytes_read = try os.read(comm_fd, self.buffer);
 
-        return buffer[0 .. bytes_read - 1];
+        return self.buffer[0 .. bytes_read - 1];
     }
 
     pub fn isAlive(self: *const Self) bool {
@@ -76,7 +73,7 @@ pub const Process = struct {
     }
 
     pub fn vmRss(self: *const Self) !usize {
-        var filename = try fmt.bufPrint(&buffer, "/proc/{}/statm", .{self.pid});
+        var filename = try fmt.bufPrint(self.buffer, "/proc/{}/statm", .{self.pid});
 
         var statm_file = try fs.cwd().openFile(filename, .{});
         defer statm_file.close();
@@ -84,7 +81,7 @@ pub const Process = struct {
 
         // Skip first field (total program size)
         try statm_reader.skipUntilDelimiterOrEof(' ');
-        var rss_str = try statm_reader.readUntilDelimiter(&buffer, ' ');
+        var rss_str = try statm_reader.readUntilDelimiter(self.buffer, ' ');
 
         var ret = parse(usize, rss_str) orelse return error.MalformedVmRss;
         return (ret * std.mem.page_size) / 1024;
@@ -128,7 +125,7 @@ fn coldNoOp() void {
 
 /// Searches for a process to kill in order to
 /// free up memory
-pub fn findVictimProcess() !Process {
+pub fn findVictimProcess(buffer: []u8) !Process {
     var victim: Process = undefined;
     var victim_vm_rss: usize = undefined;
     var victim_is_undefined = true;
@@ -156,7 +153,7 @@ pub fn findVictimProcess() !Process {
             continue;
         }
 
-        const process = try Process.fromPid(pid);
+        const process = try Process.fromPid(pid, buffer);
 
         if (victim_is_undefined) {
             // We're still reading the first process so a victim hasn't been chosen

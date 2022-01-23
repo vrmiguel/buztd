@@ -57,7 +57,7 @@ pub const Monitor = struct {
     pub fn poll(self: *Self) !void {
         while (true) {
             if (self.isMemoryLow()) {
-                const victim_process = try process.findVictimProcess();
+                const victim_process = try process.findVictimProcess(self.buffer);
                 try victim_process.terminateSelf();
             }
 
