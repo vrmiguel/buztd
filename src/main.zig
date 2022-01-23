@@ -36,5 +36,6 @@ pub fn main() anyerror!void {
 
     _ = try memory.MemoryInfo.new();
 
-    _ = try monitor.Monitor.new(5.0, &buffer);
+    var m = try monitor.Monitor.new(0.1, &buffer);
+    try m.poll();
 }

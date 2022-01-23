@@ -1,4 +1,5 @@
 const std = @import("std");
+const time = std.time;
 
 const memory = @import("memory.zig");
 const pressure = @import("pressure.zig");
@@ -27,26 +28,49 @@ pub const Monitor = struct {
     const Self = @This();
 
     pub fn new(cutoff_psi: f32, buffer: []u8) !Self {
-        const mem_info = try memory.MemoryInfo.new();
-        const status: MemoryStatus = blk: {
-            if (mem_info.available_ram_percent <= 15) {
-                const psi = try pressure.pressureSomeAvg10(buffer);
+        // const mem_info = try memory.MemoryInfo.new();
+        // const status: MemoryStatus = blk: {
+        //     if (mem_info.available_ram_percent <= 15) {
+        //         const psi = try pressure.pressureSomeAvg10(buffer);
+        //         break :blk MemoryStatus { .near_terminal = psi };
+        //     } else {
+        //         break :blk MemoryStatus.ok;
+        //     }
+        // };
+
+        var self = Self {
+            .mem_info = undefined,
+            .cutoff_psi = cutoff_psi,
+            .status = undefined,
+            .buffer = buffer,
+        };
+
+        try self.updateMemoryStats();
+
+        return self;
+    }
+
+    pub fn updateMemoryStats(self: * Self) !void {
+        self.mem_info = try memory.MemoryInfo.new();
+        self.status = blk: {
+            if (self.mem_info.available_ram_percent <= 15) {
+                const psi = try pressure.pressureSomeAvg10(self.buffer);
+                std.log.warn("read avg10: {}", .{psi});
                 break :blk MemoryStatus { .near_terminal = psi };
             } else {
                 break :blk MemoryStatus.ok;
             }
         };
-
-        return Self {
-            .mem_info = mem_info,
-            .cutoff_psi = cutoff_psi,
-            .status = status,
-            .buffer = buffer,
-        };
     }
 
-    pub fn poll(self: Self) !void {
-        std.log.warn("isMemoryLow = {}", .{self.isMemoryLow()});
+    pub fn poll(self: *Self) !void {
+        while (true) {
+            std.log.warn("Free RAM = {}%", .{self.mem_info.available_ram_percent});
+            try self.updateMemoryStats();
+            std.log.warn("isMemoryLow = {}", .{self.isMemoryLow()});
+            time.sleep(200_000);
+        }        
+
     }
 
     fn isMemoryLow(self: *const Self) bool {

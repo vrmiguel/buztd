@@ -23,6 +23,7 @@ pub fn pressureSomeAvg10(buffer: []u8) !f32 {
 
     // Next up is the value we want
     const avg10_value = try memory_pressure_reader.readUntilDelimiter(buffer, ' ');
+    std.log.info("avg10: {s}", .{avg10_value});
 
     return try fmt.parseFloat(f32, avg10_value);
 }
