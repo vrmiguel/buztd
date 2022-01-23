@@ -54,13 +54,24 @@ pub const Monitor = struct {
         };
     }
 
+    fn freeUpMemory(self: *Self) !void {
+        const victim_process = try process.findVictimProcess(self.buffer);
+
+        // Check for memory stats again to see if the
+        // low-memory situation was solved while
+        // we were searching for our victim
+        try self.updateMemoryStats();
+        if (self.isMemoryLow()) {
+            try victim_process.terminateSelf();
+        }
+    }
+
     pub fn poll(self: *Self) !void {
         while (true) {
             if (self.isMemoryLow()) {
-                const victim_process = try process.findVictimProcess(self.buffer);
-                try victim_process.terminateSelf();
+                try self.freeUpMemory();
             }
-
+            
             std.log.warn("Free RAM = {}%", .{self.mem_info.available_ram_percent});
             try self.updateMemoryStats();
             const sleep_time = self.sleepTimeNs();
