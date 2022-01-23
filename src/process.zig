@@ -9,6 +9,7 @@ const fs = std.fs;
 const fmt = std.fmt;
 const mem = std.mem;
 const os = std.os;
+const libc = std.c;
 const time = std.time;
 
 pub const Process = struct {
@@ -87,14 +88,18 @@ pub const Process = struct {
         return (ret * std.mem.page_size) / 1024;
     }
 
-    pub fn signalSelf(self: *const Self, signal: u8) !void {
-        try os.kill(@intCast(i32, self.pid), signal);
+    pub fn signalSelf(self: *const Self, signal: u8) void {
+        if (0 != libc.kill(@intCast(i32, self.pid), signal)) {
+            const is_alive = self.isAlive();
+            std.log.warn("Failed to send signal {} to process {}", .{signal, self.pid});
+            std.log.warn("Is process {} still alive? {b}", .{self.pid, is_alive});
+        }
     }
 
     pub fn terminateSelf(self: Self) !void {
         const half_sec_in_ns: u64 = 500000000;
 
-        try self.signalSelf(csig.SIGTERM);
+        self.signalSelf(csig.SIGTERM);
         
         var attempt: u8 = 0;
         
@@ -105,7 +110,7 @@ pub const Process = struct {
             }
             time.sleep(half_sec_in_ns);
             // Escalate to sigkill
-            try self.signalSelf(csig.SIGKILL);
+            self.signalSelf(csig.SIGKILL);
         }
     }
 };
@@ -192,8 +197,6 @@ pub fn findVictimProcess(buffer: []u8) !Process {
 
         victim = process;
         victim_vm_rss = current_vm_rss;
-
-        // std.log.warn("New victim found: );
     }
 
     const ns_elapsed = timer.read();

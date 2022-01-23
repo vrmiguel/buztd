@@ -23,7 +23,7 @@ pub const Monitor = struct {
     mem_info: memory.MemoryInfo,
     /// Memory status as of last checked
     status: MemoryStatus,
-    /// A buffer of at least 128 bytes
+    /// A pointer to a buffer of at least 128 bytes
     buffer: []u8,
     const Self = @This();
 
@@ -70,10 +70,9 @@ pub const Monitor = struct {
                 try self.freeUpMemory();
             }
             
-            std.log.warn("Free RAM = {}%", .{self.mem_info.available_ram_percent});
             try self.updateMemoryStats();
             const sleep_time = self.sleepTimeNs();
-            std.log.warn("adaptive sleep time = {}ms", .{sleep_time});
+            std.log.warn("sleeping for {}ms, {}% of RAM is free", .{sleep_time, self.mem_info.available_ram_percent});
             
             // Convert ms to ns
             time.sleep(sleep_time * 1000000);
