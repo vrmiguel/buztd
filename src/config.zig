@@ -1,3 +1,7 @@
+//! The configuration file for bustd
+const std = @import("std");
+
+
 /// Set whether or not bustd should daemonize
 /// itself. Don't use this if running bustd as a systed
 /// daemon or something of the sort.
@@ -24,3 +28,22 @@ pub const free_ram_threshold: u8 = 15;
 /// The ideal value for this cutoff varies a lot between systems.
 /// Try messing around with `tools/mem-eater.c` to guesstimate a value that works well for you.
 pub const cutoff_psi: f32 = 0.05;
+
+/// Sets processes that bustd must never kill.
+/// The values expected here are the `comm` values of the process you don't want to have terminated.
+/// A comm-value is the filename of the executable truncated to 16 characters..
+///
+/// Example:
+/// pub const unkillables = std.ComptimeStringMap(void, .{
+///         .{ "firefox", void },
+///         .{ "rustc", void },
+///         .{ "electron", void },
+/// });
+pub const unkillables = std.ComptimeStringMap(void, .{
+        // Ideally, don't kill the oomkiller
+        .{ "bustd", void },
+});
+
+
+/// If any error occurs, restarts the monitoring instead of exiting with an unsuccesful status code
+pub const retry: bool = true;

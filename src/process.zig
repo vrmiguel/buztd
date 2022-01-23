@@ -5,12 +5,22 @@ const csig = @cImport({
 const unistd = @cImport({
     @cInclude("unistd.h");
 });
+const config = @import("config.zig");
 const fs = std.fs;
 const fmt = std.fmt;
 const mem = std.mem;
 const os = std.os;
 const libc = std.c;
 const time = std.time;
+
+
+fn signalToString(signal: u8) []const u8 {
+    return switch (signal) {
+        csig.SIGTERM => "SIGTERM",
+        csig.SIGKILL => "SIGKILL",
+        else => "unknown"
+    };
+}
 
 pub const Process = struct {
     pid: u32,
@@ -89,26 +99,27 @@ pub const Process = struct {
     }
 
     pub fn signalSelf(self: *const Self, signal: u8) void {
-        if (0 != libc.kill(@intCast(i32, self.pid), signal)) {
-            const is_alive = self.isAlive();
-            std.log.warn("Failed to send signal {} to process {}", .{signal, self.pid});
-            std.log.warn("Is process {} still alive? {b}", .{self.pid, is_alive});
+        // Don't warn `kill` failure if the process is no longer alive
+        if (0 != libc.kill(@intCast(i32, self.pid), signal) and self.isAlive()) {
+            std.log.warn("Failed to send {s} to process {}", .{signalToString(signal), self.pid});
+        } else {
+            std.log.warn("Successfully sent {s} to process {}", .{signalToString(signal), self.pid});
         }
     }
 
     pub fn terminateSelf(self: Self) !void {
-        const half_sec_in_ns: u64 = 500000000;
+        const quarter_sec_in_ns: u64 = 250000000;
 
         self.signalSelf(csig.SIGTERM);
         
         var attempt: u8 = 0;
         
         while (attempt < 20) : (attempt += 1) {
+            time.sleep(quarter_sec_in_ns);
             if (!self.isAlive()) {
                 std.log.warn("Process {} has exited.", .{self.pid});
                 return;
             }
-            time.sleep(half_sec_in_ns);
             // Escalate to sigkill
             self.signalSelf(csig.SIGKILL);
         }
@@ -171,6 +182,12 @@ pub fn findVictimProcess(buffer: []u8) !Process {
 
         if (victim.oom_score > process.oom_score) {
             // Our current victim is less innocent than the process being analysed
+            continue;
+        }
+
+        const victim_comm = try victim.comm();
+        if (config.unkillables.get(victim_comm) != null) {
+            // The current process was set as unkillable
             continue;
         }
 
