@@ -79,9 +79,9 @@ As of the time of writing, this version of `buztd` offers no command-line argume
 
 
 ```zig
-/// Set whether or not buztd should daemonize
-/// itself. Don't use this if running buztd as a systed
-/// daemon or something of the sort.
+/// Sets whether or not buztd should daemonize
+/// itself. Don't use this if running buztd as a systemd
+/// service or something of the sort.
 pub const should_daemonize: bool = false;
 
 /// Free RAM percentage figures below this threshold are considered to be near terminal, meaning 
@@ -105,6 +105,19 @@ pub const free_ram_threshold: u8 = 15;
 /// The ideal value for this cutoff varies a lot between systems.
 /// Try messing around with `tools/mem-eater.c` to guesstimate a value that works well for you.
 pub const cutoff_psi: f32 = 0.05;
+
+/// Sets processes that buztd must never kill.
+/// The values expected here are the `comm` values of the process you don't want to have terminated.
+/// A comm-value is the filename of the executable truncated to 16 characters..
+pub const unkillables = std.ComptimeStringMap(void, .{
+         .{ "firefox", void },
+         .{ "rustc", void },
+         .{ "electron", void },
+});
+
+
+/// If any error occurs, restarts the monitoring instead of exiting with an unsuccesful status code
+pub const retry: bool = true;
 ```
 
 
