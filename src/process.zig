@@ -1,4 +1,10 @@
 const std = @import("std");
+const csig = @cImport({
+    @cInclude("signal.h");
+});
+const unistd = @cImport({
+    @cInclude("unistd.h");
+});
 const fs = std.fs;
 const fmt = std.fmt;
 const mem = std.mem;
@@ -63,6 +69,12 @@ pub const Process = struct {
         return buffer[0 .. bytes_read - 1];
     }
 
+    pub fn isAlive(self: *const Self) bool {
+        const group_id = unistd.getpgid(@intCast(c_int, self.pid));
+
+        return group_id > 0;
+    }
+
     pub fn vmRss(self: *const Self) !usize {
         var filename = try fmt.bufPrint(&buffer, "/proc/{}/statm", .{self.pid});
 
@@ -76,6 +88,28 @@ pub const Process = struct {
 
         var ret = parse(usize, rss_str) orelse return error.MalformedVmRss;
         return (ret * std.mem.page_size) / 1024;
+    }
+
+    pub fn signalSelf(self: *const Self, signal: u8) !void {
+        try os.kill(@intCast(i32, self.pid), signal);
+    }
+
+    pub fn terminateSelf(self: Self) !void {
+        const half_sec_in_ns: u64 = 500000000;
+
+        try self.signalSelf(csig.SIGTERM);
+        
+        var attempt: u8 = 0;
+        
+        while (attempt < 20) : (attempt += 1) {
+            if (!self.isAlive()) {
+                std.log.warn("Process {} has exited.", .{self.pid});
+                return;
+            }
+            time.sleep(half_sec_in_ns);
+            // Escalate to sigkill
+            try self.signalSelf(csig.SIGKILL);
+        }
     }
 };
 

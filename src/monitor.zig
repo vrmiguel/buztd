@@ -4,6 +4,7 @@ const math = std.math;
 
 const memory = @import("memory.zig");
 const pressure = @import("pressure.zig");
+const process = @import("process.zig");
 
 const MemoryStatusTag = enum {
     ok,
@@ -55,14 +56,22 @@ pub const Monitor = struct {
 
     pub fn poll(self: *Self) !void {
         while (true) {
+            if (self.isMemoryLow()) {
+                const victim_process = try process.findVictimProcess();
+                try victim_process.terminateSelf();
+            }
+
             std.log.warn("Free RAM = {}%", .{self.mem_info.available_ram_percent});
             try self.updateMemoryStats();
-            std.log.warn("isMemoryLow = {}", .{self.isMemoryLow()});
-            time.sleep(self.sleepTimeNs());
+            const sleep_time = self.sleepTimeNs();
+            std.log.warn("adaptive sleep time = {}ms", .{sleep_time});
+            
+            // Convert ms to ns
+            time.sleep(sleep_time * 1000000);
         }
     }
 
-    /// Determines how much bustd should sleep
+    /// Determines for how long bustd should sleep
     /// This function is essentially a copy of how earlyoom calculates its sleep time
     ///
     /// Credits: https://github.com/rfjakob/earlyoom/blob/dea92ae67997fcb1a0664489c13d49d09d472d40/main.c#L365
@@ -83,7 +92,6 @@ pub const Monitor = struct {
         const ram_terminal_percent: f64 = 10.0;
         const swap_terminal_percent: f64 = 10.0;
 
-
         const f_ram_headroom_kib = (@intToFloat(f64, self.mem_info.available_ram_percent)
             - ram_terminal_percent)
             * (@intToFloat(f64, self.mem_info.total_ram_mb) * 10.0);
@@ -99,8 +107,7 @@ pub const Monitor = struct {
         time_to_sleep = math.min(time_to_sleep, max_sleep);
         time_to_sleep = math.max(time_to_sleep, min_sleep);
         
-        // Convert ms to ns
-        return @intCast(u64, time_to_sleep) * 1000000;
+        return @intCast(u64, time_to_sleep);
     }
 
     fn isMemoryLow(self: *const Self) bool {
