@@ -60,7 +60,7 @@ Try messing around with `tools/mem-eater.c` to guesstimate a value that works we
 ## Building
 
 Requirements:
-* [Zig 0.9](https://ziglang.org/)
+* [Zig 0.10](https://ziglang.org/)
 * Linux 4.20+ built with `CONFIG_PSI=y`
 
 ```shell

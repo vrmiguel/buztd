@@ -145,9 +145,9 @@ pub fn findVictimProcess(buffer: []u8) !Process {
     var victim_vm_rss: usize = undefined;
     var victim_is_undefined = true;
 
-    const timer = try time.Timer.start();
+    var timer = try time.Timer.start();
 
-    var proc_dir = try fs.cwd().openDir("/proc", .{ .access_sub_paths = false, .iterate = true });
+    var proc_dir = try fs.cwd().openIterableDir("/proc", .{ .access_sub_paths = false });
     var proc_it = proc_dir.iterate();
 
     while (try proc_it.next()) |proc_entry| {
