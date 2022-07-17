@@ -13,10 +13,10 @@ const MemoryStatusTag = enum {
 };
 
 const MemoryStatus = union(MemoryStatusTag) {
-    /// Memory is "okay": basically no risk of memory thrashing 
+    /// Memory is "okay": basically no risk of memory thrashing
     ok: void,
     /// Nearing the terminal PSI cutoff: memory thrashing is occurring or close to it. Holds the current PSI value.
-    near_terminal: f32
+    near_terminal: f32,
 };
 
 pub const Monitor = struct {
@@ -69,11 +69,11 @@ pub const Monitor = struct {
             if (self.isMemoryLow()) {
                 try self.freeUpMemory();
             }
-            
+
             try self.updateMemoryStats();
             const sleep_time = self.sleepTimeNs();
-            std.log.warn("sleeping for {}ms, {}% of RAM is free", .{sleep_time, self.mem_info.available_ram_percent});
-            
+            std.log.warn("sleeping for {}ms, {}% of RAM is free", .{ sleep_time, self.mem_info.available_ram_percent });
+
             // Convert ms to ns
             time.sleep(sleep_time * 1000000);
         }
@@ -93,28 +93,23 @@ pub const Monitor = struct {
         const swap_fill_rate: i64 = 800;
 
         // Maximum and minimum sleep times (in ms)
-        const min_sleep: i64 =  100;
+        const min_sleep: i64 = 100;
         const max_sleep: i64 = 1000;
 
         // TODO: make these percentages configurable by args./config. file
         const ram_terminal_percent: f64 = 10.0;
         const swap_terminal_percent: f64 = 10.0;
 
-        const f_ram_headroom_kib = (@intToFloat(f64, self.mem_info.available_ram_percent)
-            - ram_terminal_percent)
-            * (@intToFloat(f64, self.mem_info.total_ram_mb) * 10.0);
-        const f_swap_headroom_kib = (@intToFloat(f64, self.mem_info.available_swap_percent)
-            - swap_terminal_percent)
-            * (@intToFloat(f64, self.mem_info.total_swap_mb) * 10.0);
+        const f_ram_headroom_kib = (@intToFloat(f64, self.mem_info.available_ram_percent) - ram_terminal_percent) * (@intToFloat(f64, self.mem_info.total_ram_mb) * 10.0);
+        const f_swap_headroom_kib = (@intToFloat(f64, self.mem_info.available_swap_percent) - swap_terminal_percent) * (@intToFloat(f64, self.mem_info.total_swap_mb) * 10.0);
 
         const i_ram_headroom_kib = math.max(0, @floatToInt(i64, f_ram_headroom_kib));
         const i_swap_headroom_kib = math.max(0, @floatToInt(i64, f_swap_headroom_kib));
 
-
         var time_to_sleep = @divFloor(i_ram_headroom_kib, ram_fill_rate) + @divFloor(i_swap_headroom_kib, swap_fill_rate);
         time_to_sleep = math.min(time_to_sleep, max_sleep);
         time_to_sleep = math.max(time_to_sleep, min_sleep);
-        
+
         return @intCast(u64, time_to_sleep);
     }
 

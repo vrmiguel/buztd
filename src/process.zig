@@ -13,12 +13,11 @@ const os = std.os;
 const libc = std.c;
 const time = std.time;
 
-
 fn signalToString(signal: u8) []const u8 {
     return switch (signal) {
         csig.SIGTERM => "SIGTERM",
         csig.SIGKILL => "SIGKILL",
-        else => "unknown"
+        else => "unknown",
     };
 }
 
@@ -101,9 +100,9 @@ pub const Process = struct {
     pub fn signalSelf(self: *const Self, signal: u8) void {
         // Don't warn `kill` failure if the process is no longer alive
         if (0 != libc.kill(@intCast(i32, self.pid), signal) and self.isAlive()) {
-            std.log.warn("Failed to send {s} to process {}", .{signalToString(signal), self.pid});
+            std.log.warn("Failed to send {s} to process {}", .{ signalToString(signal), self.pid });
         } else {
-            std.log.warn("Successfully sent {s} to process {}", .{signalToString(signal), self.pid});
+            std.log.warn("Successfully sent {s} to process {}", .{ signalToString(signal), self.pid });
         }
     }
 
@@ -111,9 +110,9 @@ pub const Process = struct {
         const quarter_sec_in_ns: u64 = 250000000;
 
         self.signalSelf(csig.SIGTERM);
-        
+
         var attempt: u8 = 0;
-        
+
         while (attempt < 20) : (attempt += 1) {
             time.sleep(quarter_sec_in_ns);
             if (!self.isAlive()) {
