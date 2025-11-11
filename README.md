@@ -1,3 +1,5 @@
+:warning: This will be marged with the original [bustd](https://github.com/vrmiguel/bustd) repository.
+
 # `buztd`: Available memory or bust!
 
 `buztd` is a lightweight process killer daemon for out-of-memory scenarios for Linux!
